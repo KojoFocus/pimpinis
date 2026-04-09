@@ -1,9 +1,63 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Product, Category, ColourVariant } from '@/types'
 import { uploadProductImage } from '@/lib/supabase/storage'
 import { X, ChevronDown, ChevronUp } from 'lucide-react'
+import { swatchColor } from '@/lib/colours'
+
+function cssToHex(css: string): string | null {
+  const hex = swatchColor(css)
+  return hex === '#d1d5db' ? null : hex
+}
+
+/** Text input + live colour swatch + native colour picker, all in one. */
+function ColourPickerInput({
+  value, onChange, placeholder = 'e.g. Black, Red, Navy…'
+}: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const pickerRef = useRef<HTMLInputElement>(null)
+  const resolvedHex = cssToHex(value)
+  const displayHex  = resolvedHex ?? '#d1d5db'
+  const pickerHex   = resolvedHex ?? '#000000'
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* Swatch — shows the resolved colour; click opens picker */}
+      <button
+        type="button"
+        title="Open colour picker"
+        onClick={() => pickerRef.current?.click()}
+        className="flex-shrink-0 w-8 h-8 rounded-lg border-2 transition-all cursor-pointer"
+        style={{
+          background: displayHex,
+          borderColor: resolvedHex ? displayHex : '#e5e7eb',
+          boxShadow: resolvedHex ? `0 0 0 2px white, 0 0 0 3px ${displayHex}` : undefined,
+        }}
+      />
+      {/*
+        Native colour picker — uncontrolled so it always opens at the right colour.
+        key forces remount whenever the resolved hex changes (e.g. user finishes typing "mauve").
+        When the user picks a colour, write the hex back as the label value.
+      */}
+      <input
+        key={pickerHex}
+        ref={pickerRef}
+        type="color"
+        defaultValue={pickerHex}
+        onChange={e => onChange(e.target.value)}
+        className="sr-only"
+      />
+      {/* Text input — user types the colour name */}
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4873A] bg-white min-w-0"
+      />
+    </div>
+  )
+}
 
 const SIZE_MAP: Record<string, string[]> = {
   footwear:    ['18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46','47','48','49'],
@@ -92,11 +146,35 @@ export default function ProductForm({ categories, product }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+
+    const sellingPrice = Number(form.selling_price)
+    if (Number.isNaN(sellingPrice) || sellingPrice <= 0) {
+      alert('Selling price must be a positive number')
+      setLoading(false)
+      return
+    }
+
+    const stockQty = form.stock_qty === '' ? 0 : Number(form.stock_qty)
+    if (!Number.isInteger(stockQty) || stockQty < 0) {
+      alert('Stock quantity must be a non-negative whole number')
+      setLoading(false)
+      return
+    }
+
     const images = colourVariants.map(v => v.image).filter(Boolean)
     const colours = [...new Set(colourVariants.map(v => v.colour).filter(Boolean))]
     // Global sizes = union of all variant sizes (for backward compat)
     const sizes = [...new Set(colourVariants.flatMap(v => v.sizes ?? []))]
-    const payload = { ...form, images, colours, sizes, colour_variants: colourVariants }
+    const payload = {
+      ...form,
+      selling_price: sellingPrice,
+      stock_qty: stockQty,
+      images,
+      colours,
+      sizes,
+      colour_variants: colourVariants,
+    }
+
     const res = await fetch(
       isEdit ? `/api/products/${product!.id}` : '/api/products',
       { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
@@ -159,11 +237,22 @@ export default function ProductForm({ categories, product }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className={label}>Selling Price (GHS) *</label>
-          <input type="number" step="0.01" min="0" className={field} value={form.selling_price} onChange={set('selling_price')} required placeholder="0.00" />
+          <input
+            type="number"
+            step="0.01"
+            min="0.01"
+            inputMode="decimal"
+            pattern="^[0-9]*\.?[0-9]{0,2}$"
+            className={field}
+            value={form.selling_price}
+            onChange={set('selling_price')}
+            required
+            placeholder="0.00"
+          />
         </div>
         <div>
           <label className={label}>Stock Quantity</label>
-          <input type="number" min="0" className={field} value={form.stock_qty} onChange={set('stock_qty')} />
+          <input type="number" step="1" min="0" inputMode="numeric" pattern="[0-9]*" className={field} value={form.stock_qty} onChange={set('stock_qty')} />
         </div>
       </div>
 
@@ -206,13 +295,9 @@ export default function ProductForm({ categories, product }: Props) {
                       <label className="text-xs text-gray-500 mb-1 block">
                         Colour tag <span className="text-gray-400 font-normal">(optional)</span>
                       </label>
-                      <input
-                        type="text"
-                        list="colour-presets"
+                      <ColourPickerInput
                         value={v.colour}
-                        onChange={e => updateVariantColour(i, e.target.value)}
-                        placeholder="e.g. Black, Red, Navy…"
-                        className={field}
+                        onChange={colour => updateVariantColour(i, colour)}
                       />
                       <p className="text-[11px] text-gray-500 mt-2">
                         {availableSizes.length > 0
@@ -287,9 +372,6 @@ export default function ProductForm({ categories, product }: Props) {
                 </div>
               )
             })}
-            <datalist id="colour-presets">
-              {PRESET_COLOURS.map(c => <option key={c} value={c} />)}
-            </datalist>
           </div>
         )}
 

@@ -194,6 +194,35 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
+      {/* Stock Management */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-semibold text-gray-800">Stock Management</h2>
+          <Link href="/admin/stock" className="text-xs text-[#C4873A] hover:text-[#7A4F2D] flex items-center gap-1 font-medium">
+            View All <ArrowRight size={12} />
+          </Link>
+        </div>
+        <div className="space-y-4">
+          {lowStock.slice(0, 3).map((item: any) => (
+            <div key={item.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{item.emoji}</span>
+                <div>
+                  <p className="font-medium text-gray-900">{item.name}</p>
+                  <p className="text-sm text-red-600">Only {item.stock_qty} left</p>
+                </div>
+              </div>
+              <button className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm font-medium hover:bg-red-200">
+                Adjust Stock
+              </button>
+            </div>
+          ))}
+          {lowStock.length === 0 && (
+            <p className="text-center text-gray-500 py-4">All products are well stocked! 🎉</p>
+          )}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Recent Orders */}

@@ -18,6 +18,21 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { items, ...orderData } = body
 
+  // Check stock availability
+  for (const item of items || []) {
+    const { data: product } = await supabase
+      .from('products')
+      .select('stock_qty, name')
+      .eq('id', item.product_id)
+      .single()
+
+    if (!product || product.stock_qty < item.quantity) {
+      return NextResponse.json({
+        error: `Insufficient stock for ${product?.name || 'product'}. Available: ${product?.stock_qty || 0}`
+      }, { status: 400 })
+    }
+  }
+
   const { data: order, error } = await supabase
     .from('orders')
     .insert(orderData)
@@ -36,6 +51,14 @@ export async function POST(req: NextRequest) {
       size: i.size ?? null,
     }))
     await supabase.from('order_items').insert(orderItems)
+
+    // Update stock quantities
+    for (const item of items) {
+      await supabase.rpc('decrement_stock', {
+        product_id: item.product_id,
+        quantity: item.quantity
+      })
+    }
   }
 
   return NextResponse.json(order, { status: 201 })

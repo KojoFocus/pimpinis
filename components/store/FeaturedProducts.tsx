@@ -17,25 +17,7 @@ const BADGE_STYLES: Record<string, string> = {
   sale: 'bg-red-500 text-white',
 }
 
-// Map colour names → CSS colors for the dot swatches
-const COLOUR_CSS: Record<string, string> = {
-  black:  '#111111',
-  white:  '#f0ece8',
-  red:    '#e53e3e',
-  blue:   '#3b82f6',
-  navy:   '#1e3a5f',
-  green:  '#22c55e',
-  yellow: '#eab308',
-  pink:   '#ec4899',
-  brown:  '#7c4f2e',
-  grey:   '#9ca3af',
-  gray:   '#9ca3af',
-  beige:  '#d4b896',
-  purple: '#a855f7',
-  orange: '#f97316',
-  gold:   '#c8961e',
-  silver: '#b0b8c1',
-}
+import { swatchColor } from '@/lib/colours'
 
 function ColourDots({ colours }: { colours: string[] }) {
   if (!colours.length) return null
@@ -43,19 +25,14 @@ function ColourDots({ colours }: { colours: string[] }) {
   const extra = colours.length - shown.length
   return (
     <div className="flex items-center gap-1 mb-2.5">
-      {shown.map(c => {
-        const css = COLOUR_CSS[c.toLowerCase()]
-        return css ? (
-          <span
-            key={c}
-            title={c}
-            style={{ background: css }}
-            className={`w-3.5 h-3.5 rounded-full flex-shrink-0 border ${c.toLowerCase() === 'white' ? 'border-gray-300' : 'border-transparent'}`}
-          />
-        ) : (
-          <span key={c} title={c} className="w-3.5 h-3.5 rounded-full bg-gray-200 flex-shrink-0 border border-transparent" />
-        )
-      })}
+      {shown.map(c => (
+        <span
+          key={c}
+          title={c}
+          style={{ background: swatchColor(c) }}
+          className={`w-3.5 h-3.5 rounded-full flex-shrink-0 border ${c.trim().toLowerCase() === 'white' ? 'border-gray-300' : 'border-transparent'}`}
+        />
+      ))}
       {extra > 0 && (
         <span className="text-[10px] text-gray-400 font-semibold ml-0.5">+{extra}</span>
       )}

@@ -3,6 +3,7 @@ import { useCart } from '@/components/CartContext'
 import type { Product } from '@/types'
 import { ShoppingBag, Check, Zap } from 'lucide-react'
 import { useState } from 'react'
+import { swatchColor } from '@/lib/colours'
 
 interface Props {
   product: Product
@@ -67,12 +68,19 @@ export default function AddToCartButton({
                 key={colour}
                 type="button"
                 onClick={() => onColourChange(colour)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border transition-all ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold border transition-all ${
                   selectedColour === colour
                     ? 'bg-[#1A1208] text-white border-[#1A1208] shadow-sm'
                     : 'bg-white text-gray-700 border-gray-200 hover:border-[#C4873A]'
                 }`}
               >
+                <span
+                  className="inline-flex h-2.5 w-2.5 rounded-full border flex-shrink-0"
+                  style={{
+                    backgroundColor: swatchColor(colour),
+                    borderColor: colour.trim().toLowerCase() === 'white' ? '#9CA3AF' : 'transparent',
+                  }}
+                />
                 {selectedColour === colour && <Check size={12} />}
                 {colour}
               </button>
@@ -132,15 +140,6 @@ export default function AddToCartButton({
             {added ? 'Added!' : 'Add to Cart'}
           </button>
         </div>
-        {!canSubmit && (
-        <div className="rounded-3xl border border-[#C4873A]/20 bg-[#FFF4DE] px-4 py-3 text-sm text-[#8C4200]">
-          {requiresColour && !selectedColour && 'Choose a colour to continue.'}
-          {requiresColour && !selectedColour && requiresSize && !selectedSize && ' Then choose a size.'}
-          {!requiresColour && requiresSize && !selectedSize && 'Choose a size to continue.'}
-          {requiresColour && selectedColour && requiresSize && !selectedSize && 'Choose a size for this colour before checkout.'}
-          {!(requiresColour && !selectedColour) && !(requiresSize && !selectedSize) && 'Complete your selection to continue.'}
-        </div>
-      )}
       </div>
     </div>
   )

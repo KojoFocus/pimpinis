@@ -21,9 +21,16 @@ export async function PUT(req: NextRequest, ctx: RouteContext<'/api/products/[id
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
+  const payload = {
+    ...body,
+    ...(body.selling_price !== undefined ? { selling_price: Number(body.selling_price) } : {}),
+    ...(body.stock_qty !== undefined ? { stock_qty: Number(body.stock_qty) } : {}),
+    ...(body.cost_price !== undefined ? { cost_price: Number(body.cost_price) } : {}),
+  }
+
   const { data, error } = await supabase
     .from('products')
-    .update(body)
+    .update(payload)
     .eq('id', id)
     .select()
     .single()

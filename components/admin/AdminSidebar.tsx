@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, PlusCircle, ShoppingBag, LogOut, Tag, Menu, X, Store } from 'lucide-react'
+import { LayoutDashboard, Package, PlusCircle, ShoppingBag, LogOut, Tag, Menu, X, Store, Archive } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useState } from 'react'
 
@@ -11,6 +11,7 @@ const links = [
   { href: '/admin/products/new', label: 'Add Product', icon: PlusCircle },
   { href: '/admin/orders',       label: 'Orders',      icon: ShoppingBag },
   { href: '/admin/categories',   label: 'Categories',  icon: Tag },
+  { href: '/admin/stock',        label: 'Stock',       icon: Archive },
 ]
 
 function NavLinks({ onClose }: { onClose?: () => void }) {
