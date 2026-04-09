@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import ProductCard from '@/components/store/ProductCard'
@@ -54,7 +54,7 @@ function emojiForCategory(cat: Category) {
   return '🏷️'
 }
 
-export default function ShopPage() {
+function ShopContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
@@ -120,7 +120,7 @@ export default function ShopPage() {
       {/* Filter tabs */}
       <div className="flex flex-wrap gap-2 mb-8">
         <button
-          onClick={() => setSelectedCategory('')}
+          onClick={() => router.push('/shop')}
           className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
             !selectedCategory
               ? 'bg-[#1A1208] text-white'
@@ -156,5 +156,13 @@ export default function ShopPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function ShopPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-20">Loading...</div>}>
+      <ShopContent />
+    </Suspense>
   )
 }
