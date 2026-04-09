@@ -87,7 +87,7 @@ export default async function CategoryGrid() {
             return (
               <Link
                 key={cat.slug}
-                href={`/shop?category=${cat.slug}`}
+                href={`/category/${cat.slug}`}
                 className={`flex-shrink-0 ${style.bg} group flex flex-col items-center justify-center gap-2.5 rounded-2xl py-6 px-3 min-w-[96px] sm:min-w-0 hover:shadow-lg hover:-translate-y-1 transition-all duration-200`}
               >
                 <span className="text-3xl leading-none group-hover:scale-110 transition-transform duration-200">

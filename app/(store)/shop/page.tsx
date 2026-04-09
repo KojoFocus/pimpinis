@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter, useSearchParams } from 'next/navigation'
 import ProductCard from '@/components/store/ProductCard'
 import SearchBar from '@/components/store/SearchBar'
 import type { Category, Product } from '@/types'
@@ -54,11 +55,18 @@ function emojiForCategory(cat: Category) {
 }
 
 export default function ShopPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const categoryParam = searchParams.get('category') ?? ''
+    setSelectedCategory(categoryParam)
+  }, [searchParams])
 
   useEffect(() => {
     async function fetchData() {
@@ -124,7 +132,7 @@ export default function ShopPage() {
         {categories.map(c => (
           <button
             key={c.slug}
-            onClick={() => setSelectedCategory(c.slug)}
+            onClick={() => router.push(`/shop?category=${c.slug}`)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
               selectedCategory === c.slug
                 ? 'bg-[#1A1208] text-white'
