@@ -108,17 +108,25 @@ export default async function AdminDashboard() {
     <div className="space-y-8">
 
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-400 text-sm mt-0.5">Welcome back — here's your store overview</p>
         </div>
-        <Link
-          href="/admin/products/new"
-          className="flex items-center gap-2 bg-[#1A1208] hover:bg-[#C4873A] text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm"
-        >
-          <PlusCircle size={15} /> Add Product
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/admin/products/new"
+            className="flex items-center gap-2 bg-[#1A1208] hover:bg-[#C4873A] text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+          >
+            <PlusCircle size={15} /> Add Product
+          </Link>
+          <Link
+            href="/admin/orders"
+            className="flex items-center gap-2 border border-[#C4873A] text-[#C4873A] px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:bg-[#C4873A] hover:text-white"
+          >
+            <Clock size={15} /> Pending Orders ({pendingOrders ?? 0})
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
@@ -270,13 +278,14 @@ export default async function AdminDashboard() {
         <p className="text-xs uppercase tracking-[0.2em] text-gray-400 font-semibold mb-3">Quick Actions</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { href: '/admin/products/new', label: 'Add Product',  icon: PlusCircle,   color: 'text-[#C4873A]',   bg: 'bg-[#C4873A]/8' },
-            { href: '/admin/orders',       label: 'View Orders',  icon: ShoppingBag,  color: 'text-blue-500',    bg: 'bg-blue-50' },
-            { href: '/admin/products',     label: 'Manage Stock', icon: Package,      color: 'text-emerald-500', bg: 'bg-emerald-50' },
-            { href: '/admin/categories',   label: 'Categories',   icon: AlertTriangle,color: 'text-purple-500',  bg: 'bg-purple-50' },
+            { href: '/admin/products/new', label: 'Add Product',      icon: PlusCircle,   color: 'text-[#C4873A]',   bg: 'bg-[#C4873A]/8' },
+            { href: '/admin/orders',       label: 'View Orders',      icon: ShoppingBag,  color: 'text-blue-500',    bg: 'bg-blue-50' },
+            { href: '/admin/orders',       label: `Pending Orders (${pendingOrders ?? 0})`, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+            { href: '/admin/products',     label: 'Manage Stock',     icon: Package,      color: 'text-emerald-500', bg: 'bg-emerald-50' },
+            { href: '/admin/categories',   label: 'Categories',      icon: AlertTriangle,color: 'text-purple-500',  bg: 'bg-purple-50' },
           ].map(a => (
             <Link
-              key={a.href}
+              key={`${a.href}-${a.label}`}
               href={a.href}
               className="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col items-center gap-3 hover:border-[#C4873A]/30 hover:shadow-md transition-all shadow-sm text-center"
             >

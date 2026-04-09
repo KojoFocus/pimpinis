@@ -140,6 +140,9 @@ export default function ProductForm({ categories, product }: Props) {
             <option value="">Select category</option>
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+          <p className="text-xs text-gray-500 mt-2">
+            Select the category first to load the right size options for colour variants.
+          </p>
         </div>
         <div>
           <label className={label}>Badge</label>
@@ -178,14 +181,14 @@ export default function ProductForm({ categories, product }: Props) {
       </div>
 
       {/* Images, Colours & Sizes */}
-      <div>
+      <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
         <label className={label}>Images, Colours & Sizes</label>
-        <p className="text-xs text-gray-400 mb-3">
-          Upload one image per colour variant. Tag each with a colour, then expand to pick the sizes available for that colour.
+        <p className="text-xs text-gray-500 mb-4">
+          Upload one image per colour variant. Tag each with a colour, then expand to assign sizes for that colour.
         </p>
 
         {colourVariants.length > 0 && (
-          <div className="space-y-2 mb-3">
+          <div className="space-y-3 mb-3">
             {colourVariants.map((v, i) => {
               const isExpanded = expandedIdx === i
               const variantSizes = v.sizes ?? []
@@ -211,22 +214,30 @@ export default function ProductForm({ categories, product }: Props) {
                         placeholder="e.g. Black, Red, Navy…"
                         className={field}
                       />
+                      <p className="text-[11px] text-gray-500 mt-2">
+                        {availableSizes.length > 0
+                          ? variantSizes.length > 0
+                            ? `${variantSizes.length} size${variantSizes.length === 1 ? '' : 's'} selected`
+                            : 'Tap Sizes to assign available sizes for this variant.'
+                          : form.category_id
+                            ? 'This category has no preset size options.'
+                            : 'Select a category to reveal size options.'
+                        }
+                      </p>
                     </div>
 
-                    {/* Sizes toggle (only if category has sizes) */}
-                    {availableSizes.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setExpandedIdx(isExpanded ? null : i)}
-                        className="flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg hover:bg-white border border-gray-200 transition-colors text-gray-500 hover:text-[#C4873A] min-w-[56px]"
-                      >
-                        <span className="text-[10px] font-semibold uppercase tracking-wide">Sizes</span>
-                        <span className="text-xs font-bold text-[#1A1208]">
-                          {variantSizes.length > 0 ? variantSizes.length : '—'}
-                        </span>
-                        {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                      </button>
-                    )}
+                    {/* Sizes toggle */}
+                    <button
+                      type="button"
+                      onClick={() => setExpandedIdx(isExpanded ? null : i)}
+                      className="flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg hover:bg-white border border-gray-200 transition-colors text-gray-500 hover:text-[#C4873A] min-w-[56px]"
+                    >
+                      <span className="text-[10px] font-semibold uppercase tracking-wide">Sizes</span>
+                      <span className="text-xs font-bold text-[#1A1208]">
+                        {variantSizes.length > 0 ? variantSizes.length : (availableSizes.length > 0 ? '0' : '—')}
+                      </span>
+                      {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
 
                     {/* Remove */}
                     <button
@@ -239,28 +250,38 @@ export default function ProductForm({ categories, product }: Props) {
                   </div>
 
                   {/* Expanded size picker */}
-                  {isExpanded && availableSizes.length > 0 && (
+                  {isExpanded && (
                     <div className="px-3 pb-3 pt-2 bg-white border-t border-gray-100">
                       <p className="text-xs text-gray-500 mb-2">
                         Sizes for <strong>{v.colour || 'this image'}</strong>
                         {variantSizes.length > 0 && <span className="ml-1 text-gray-400">— {variantSizes.join(', ')}</span>}
                       </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {availableSizes.map(size => (
-                          <button
-                            key={size}
-                            type="button"
-                            onClick={() => toggleVariantSize(i, size)}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
-                              variantSizes.includes(size)
-                                ? 'bg-[#1A1208] text-white border-[#1A1208]'
-                                : 'bg-white text-gray-600 border-gray-200 hover:border-[#C4873A]'
-                            }`}
-                          >
-                            {size}
-                          </button>
-                        ))}
-                      </div>
+                      {availableSizes.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {availableSizes.map(size => (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => toggleVariantSize(i, size)}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                                variantSizes.includes(size)
+                                  ? 'bg-[#1A1208] text-white border-[#1A1208]'
+                                  : 'bg-white text-gray-600 border-gray-200 hover:border-[#C4873A]'
+                              }`}
+                            >
+                              {size}
+                            </button>
+                          ))}
+                        </div>
+                      ) : form.category_id ? (
+                        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
+                          This category has no preset sizes. Use the product page to enter sizes or choose a category with size variants.
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm text-gray-600">
+                          Select a category first to see size options for each colour variant.
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -279,7 +300,7 @@ export default function ProductForm({ categories, product }: Props) {
       </div>
 
       {/* Actions */}
-      <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-100">
+      <div className="sticky bottom-0 left-0 z-20 bg-white/95 backdrop-blur-md border-t border-gray-100 py-4 mt-6 flex flex-wrap gap-3">
         <button
           type="submit"
           disabled={loading}

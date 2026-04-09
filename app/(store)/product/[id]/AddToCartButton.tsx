@@ -27,27 +27,15 @@ export default function AddToCartButton({
   const requiresSize = sizes && sizes.length > 0
   const canSubmit = (!requiresColour || selectedColour) && (!requiresSize || selectedSize)
 
-  function validate() {
-    if (requiresColour && !selectedColour) {
-      alert('Please select a colour first')
-      return false
-    }
-    if (requiresSize && !selectedSize) {
-      alert('Please select a size first')
-      return false
-    }
-    return true
-  }
-
   function handleAddToCart() {
-    if (!validate()) return
+    if (!canSubmit) return
     add(product, selectedSize || undefined, selectedColour || undefined)
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)
   }
 
   function handleBuyNow() {
-    if (!validate()) return
+    if (!canSubmit) return
     const lines = [
       `Hi! I'd like to order:`,
       ``,
@@ -145,13 +133,14 @@ export default function AddToCartButton({
           </button>
         </div>
         {!canSubmit && (
-          <p className="text-xs text-[#C4873A]">
-            {requiresColour && !selectedColour ? 'Select a colour' : ''}
-            {requiresColour && !selectedColour && requiresSize && !selectedSize ? ' and ' : ''}
-            {requiresSize && !selectedSize ? 'select a size' : ''}
-            {!(requiresColour && !selectedColour) && !(requiresSize && !selectedSize) ? 'Complete your selection to continue.' : ''}
-          </p>
-        )}
+        <div className="rounded-3xl border border-[#C4873A]/20 bg-[#FFF4DE] px-4 py-3 text-sm text-[#8C4200]">
+          {requiresColour && !selectedColour && 'Choose a colour to continue.'}
+          {requiresColour && !selectedColour && requiresSize && !selectedSize && ' Then choose a size.'}
+          {!requiresColour && requiresSize && !selectedSize && 'Choose a size to continue.'}
+          {requiresColour && selectedColour && requiresSize && !selectedSize && 'Choose a size for this colour before checkout.'}
+          {!(requiresColour && !selectedColour) && !(requiresSize && !selectedSize) && 'Complete your selection to continue.'}
+        </div>
+      )}
       </div>
     </div>
   )
