@@ -1,10 +1,10 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import type { Product } from '@/types'
 import { PlusCircle, Pencil, Package } from 'lucide-react'
 
 export default async function ProductsPage() {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createAdminClient()
   const { data } = await supabase
     .from('products')
     .select('*, category:categories(id, name, slug)')

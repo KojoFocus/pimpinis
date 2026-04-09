@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import OrderStatusSelect from './OrderStatusSelect'
 import { ShoppingBag } from 'lucide-react'
 
@@ -11,7 +11,7 @@ const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
 }
 
 export default async function OrdersPage() {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createAdminClient()
   const { data: orders } = await supabase
     .from('orders')
     .select('*, items:order_items(id, quantity, unit_price, size, product:products(name, emoji))')

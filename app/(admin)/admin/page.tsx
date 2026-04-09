@@ -1,9 +1,9 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { Package, ShoppingBag, AlertTriangle, TrendingUp, PlusCircle, ArrowRight, Clock, CheckCircle2, Truck } from 'lucide-react'
 
 export default async function AdminDashboard() {
-  const supabase = await createServerSupabaseClient()
+  const supabase = createAdminClient()
 
   const [
     { count: totalProducts },
