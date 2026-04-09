@@ -154,7 +154,7 @@ export default function ProductForm({ categories, product }: Props) {
       return
     }
 
-    const stockQty = form.stock_qty === '' ? 0 : Number(form.stock_qty)
+    const stockQty = Number(form.stock_qty) || 0
     if (!Number.isInteger(stockQty) || stockQty < 0) {
       alert('Stock quantity must be a non-negative whole number')
       setLoading(false)

@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   if (Number.isNaN(sellingPrice) || sellingPrice <= 0) {
     return NextResponse.json({ error: 'Selling price must be a positive number' }, { status: 400 })
   }
-  if (body.cost_price !== undefined && (Number.isNaN(costPrice) || costPrice < 0)) {
+  if (body.cost_price !== undefined && (Number.isNaN(costPrice) || (costPrice !== null && costPrice < 0))) {
     return NextResponse.json({ error: 'Cost price must be a non-negative number' }, { status: 400 })
   }
   if (!Number.isInteger(stockQty) || stockQty < 0) {

@@ -217,7 +217,7 @@ export default async function AdminDashboard() {
               </button>
             </div>
           ))}
-          {lowStock.length === 0 && (
+          {(lowStock ?? []).length === 0 && (
             <p className="text-center text-gray-500 py-4">All products are well stocked! 🎉</p>
           )}
         </div>

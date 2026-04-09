@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { StockAdjustmentForm } from '@/components/dashboard/StockAdjustmentForm'
+import { StockForm as StockAdjustmentForm } from '@/components/dashboard/StockAdjustmentForm'
 
 export default async function StockPage() {
   const supabase = createAdminClient()
