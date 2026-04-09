@@ -1,9 +1,9 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Product, Category } from '@/types'
-import ImageUploader from './ImageUploader'
-import { X, Plus } from 'lucide-react'
+import type { Product, Category, ColourVariant } from '@/types'
+import { uploadProductImage } from '@/lib/supabase/storage'
+import { X, ChevronDown, ChevronUp } from 'lucide-react'
 
 const SIZE_MAP: Record<string, string[]> = {
   footwear:    ['18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46','47','48','49'],
@@ -28,17 +28,20 @@ function getSizes(categories: Category[], categoryId: string): string[] {
 
 interface Props {
   categories: Category[]
-  product?: Partial<Product & { sizes?: string[]; colours?: string[] }>
+  product?: Partial<Product & { sizes?: string[] }>
 }
 
 export default function ProductForm({ categories, product }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [images, setImages] = useState<string[]>(product?.images ?? [])
-  const [sizes, setSizes] = useState<string[]>(product?.sizes ?? [])
-  const [colours, setColours] = useState<string[]>(product?.colours ?? [])
-  const [colourInput, setColourInput] = useState('')
+  const [uploading, setUploading] = useState(false)
+  // Track which variant cards are expanded (showing size picker)
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
+  const [colourVariants, setColourVariants] = useState<ColourVariant[]>(() => {
+    if (product?.colour_variants?.length) return product.colour_variants
+    return (product?.images ?? []).map(img => ({ image: img, colour: '', sizes: product?.sizes ?? [] }))
+  })
   const [form, setForm] = useState({
     name:          product?.name ?? '',
     description:   product?.description ?? '',
@@ -51,29 +54,49 @@ export default function ProductForm({ categories, product }: Props) {
   const isEdit = !!product?.id
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    if (k === 'category_id') setSizes([])
     setForm(f => ({ ...f, [k]: e.target.value }))
   }
 
-  function toggleSize(size: string) {
-    setSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size])
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+    setUploading(true)
+    try {
+      const urls = await Promise.all(files.map(uploadProductImage))
+      setColourVariants(prev => [...prev, ...urls.map(url => ({ image: url, colour: '', sizes: [] }))])
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
   }
 
-  function addColour(colour: string) {
-    const trimmed = colour.trim()
-    if (!trimmed || colours.includes(trimmed)) return
-    setColours(prev => [...prev, trimmed])
-    setColourInput('')
+  function removeVariant(i: number) {
+    setColourVariants(prev => prev.filter((_, idx) => idx !== i))
+    if (expandedIdx === i) setExpandedIdx(null)
   }
 
-  function removeColour(colour: string) {
-    setColours(prev => prev.filter(c => c !== colour))
+  function updateVariantColour(i: number, colour: string) {
+    setColourVariants(prev => prev.map((v, idx) => idx === i ? { ...v, colour } : v))
+  }
+
+  function toggleVariantSize(variantIdx: number, size: string) {
+    setColourVariants(prev => prev.map((v, i) => {
+      if (i !== variantIdx) return v
+      const current = v.sizes ?? []
+      return { ...v, sizes: current.includes(size) ? current.filter(s => s !== size) : [...current, size] }
+    }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    const payload = { ...form, images, sizes, colours }
+    const images = colourVariants.map(v => v.image).filter(Boolean)
+    const colours = [...new Set(colourVariants.map(v => v.colour).filter(Boolean))]
+    // Global sizes = union of all variant sizes (for backward compat)
+    const sizes = [...new Set(colourVariants.flatMap(v => v.sizes ?? []))]
+    const payload = { ...form, images, colours, sizes, colour_variants: colourVariants }
     const res = await fetch(
       isEdit ? `/api/products/${product!.id}` : '/api/products',
       { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
@@ -93,6 +116,7 @@ export default function ProductForm({ categories, product }: Props) {
 
   const field = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4873A] bg-white'
   const label = 'block text-xs font-semibold uppercase tracking-wide mb-1.5 text-gray-600'
+  const availableSizes = getSizes(categories, form.category_id)
 
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl space-y-5">
@@ -140,90 +164,6 @@ export default function ProductForm({ categories, product }: Props) {
         </div>
       </div>
 
-      {/* Sizes */}
-      {form.category_id && (
-        <div>
-          <label className={label}>Available Sizes</label>
-          {getSizes(categories, form.category_id).length > 0 ? (
-            <>
-              <div className="flex flex-wrap gap-2">
-                {getSizes(categories, form.category_id).map(size => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => toggleSize(size)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
-                      sizes.includes(size)
-                        ? 'bg-[#1A1208] text-white border-[#1A1208]'
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-[#C4873A]'
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-              {sizes.length > 0 && <p className="text-xs text-gray-400 mt-2">Selected: {sizes.join(', ')}</p>}
-            </>
-          ) : (
-            <p className="text-xs text-gray-400">No sizes needed for this category</p>
-          )}
-        </div>
-      )}
-
-      {/* Colours */}
-      <div>
-        <label className={label}>Available Colours</label>
-        {/* Preset chips */}
-        <div className="flex flex-wrap gap-2 mb-3">
-          {PRESET_COLOURS.map(c => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => colours.includes(c) ? removeColour(c) : addColour(c)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                colours.includes(c)
-                  ? 'bg-[#1A1208] text-white border-[#1A1208]'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-[#C4873A]'
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-        {/* Custom colour input */}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            className={`${field} flex-1`}
-            value={colourInput}
-            onChange={e => setColourInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addColour(colourInput) } }}
-            placeholder="Type a custom colour and press Enter"
-          />
-          <button
-            type="button"
-            onClick={() => addColour(colourInput)}
-            className="flex items-center gap-1 px-4 py-2 bg-[#1A1208] text-white rounded-lg text-sm font-medium hover:bg-[#C4873A] transition-colors"
-          >
-            <Plus size={14} /> Add
-          </button>
-        </div>
-        {/* Selected colours */}
-        {colours.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {colours.map(c => (
-              <span key={c} className="flex items-center gap-1.5 bg-[#F0EAE0] text-[#7A4F2D] text-xs font-semibold px-3 py-1.5 rounded-full">
-                {c}
-                <button type="button" onClick={() => removeColour(c)} className="hover:text-red-500 transition-colors">
-                  <X size={11} />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-        {colours.length === 0 && <p className="text-xs text-gray-400 mt-2">No colour options — leave empty if product has one colour</p>}
-      </div>
-
       {/* Active */}
       <div>
         <label className="flex items-center gap-2.5 cursor-pointer">
@@ -237,11 +177,105 @@ export default function ProductForm({ categories, product }: Props) {
         </label>
       </div>
 
-      {/* Images */}
+      {/* Images, Colours & Sizes */}
       <div>
-        <label className={label}>Images</label>
-        <p className="text-xs text-gray-400 mb-2">Upload one image per colour variant so customers can see each colour</p>
-        <ImageUploader images={images} onChange={setImages} />
+        <label className={label}>Images, Colours & Sizes</label>
+        <p className="text-xs text-gray-400 mb-3">
+          Upload one image per colour variant. Tag each with a colour, then expand to pick the sizes available for that colour.
+        </p>
+
+        {colourVariants.length > 0 && (
+          <div className="space-y-2 mb-3">
+            {colourVariants.map((v, i) => {
+              const isExpanded = expandedIdx === i
+              const variantSizes = v.sizes ?? []
+              return (
+                <div key={i} className="border border-gray-100 rounded-xl overflow-hidden">
+                  {/* Main row */}
+                  <div className="flex items-center gap-3 p-3 bg-gray-50">
+                    {/* Thumbnail */}
+                    <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-[#F0EAE0]">
+                      {v.image && <img src={v.image} alt="" className="w-full h-full object-cover" />}
+                    </div>
+
+                    {/* Colour input */}
+                    <div className="flex-1 min-w-0">
+                      <label className="text-xs text-gray-500 mb-1 block">
+                        Colour tag <span className="text-gray-400 font-normal">(optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        list="colour-presets"
+                        value={v.colour}
+                        onChange={e => updateVariantColour(i, e.target.value)}
+                        placeholder="e.g. Black, Red, Navy…"
+                        className={field}
+                      />
+                    </div>
+
+                    {/* Sizes toggle (only if category has sizes) */}
+                    {availableSizes.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedIdx(isExpanded ? null : i)}
+                        className="flex-shrink-0 flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg hover:bg-white border border-gray-200 transition-colors text-gray-500 hover:text-[#C4873A] min-w-[56px]"
+                      >
+                        <span className="text-[10px] font-semibold uppercase tracking-wide">Sizes</span>
+                        <span className="text-xs font-bold text-[#1A1208]">
+                          {variantSizes.length > 0 ? variantSizes.length : '—'}
+                        </span>
+                        {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                      </button>
+                    )}
+
+                    {/* Remove */}
+                    <button
+                      type="button"
+                      onClick={() => removeVariant(i)}
+                      className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  {/* Expanded size picker */}
+                  {isExpanded && availableSizes.length > 0 && (
+                    <div className="px-3 pb-3 pt-2 bg-white border-t border-gray-100">
+                      <p className="text-xs text-gray-500 mb-2">
+                        Sizes for <strong>{v.colour || 'this image'}</strong>
+                        {variantSizes.length > 0 && <span className="ml-1 text-gray-400">— {variantSizes.join(', ')}</span>}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {availableSizes.map(size => (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => toggleVariantSize(i, size)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                              variantSizes.includes(size)
+                                ? 'bg-[#1A1208] text-white border-[#1A1208]'
+                                : 'bg-white text-gray-600 border-gray-200 hover:border-[#C4873A]'
+                            }`}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            <datalist id="colour-presets">
+              {PRESET_COLOURS.map(c => <option key={c} value={c} />)}
+            </datalist>
+          </div>
+        )}
+
+        <label className="block cursor-pointer border-2 border-dashed border-gray-200 rounded-xl px-4 py-3 text-sm text-center text-gray-500 hover:border-[#C4873A] hover:text-[#C4873A] transition-colors">
+          {uploading ? 'Uploading…' : '+ Add images'}
+          <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} />
+        </label>
       </div>
 
       {/* Actions */}

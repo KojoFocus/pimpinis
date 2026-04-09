@@ -17,6 +17,52 @@ const BADGE_STYLES: Record<string, string> = {
   sale: 'bg-red-500 text-white',
 }
 
+// Map colour names → CSS colors for the dot swatches
+const COLOUR_CSS: Record<string, string> = {
+  black:  '#111111',
+  white:  '#f0ece8',
+  red:    '#e53e3e',
+  blue:   '#3b82f6',
+  navy:   '#1e3a5f',
+  green:  '#22c55e',
+  yellow: '#eab308',
+  pink:   '#ec4899',
+  brown:  '#7c4f2e',
+  grey:   '#9ca3af',
+  gray:   '#9ca3af',
+  beige:  '#d4b896',
+  purple: '#a855f7',
+  orange: '#f97316',
+  gold:   '#c8961e',
+  silver: '#b0b8c1',
+}
+
+function ColourDots({ colours }: { colours: string[] }) {
+  if (!colours.length) return null
+  const shown = colours.slice(0, 5)
+  const extra = colours.length - shown.length
+  return (
+    <div className="flex items-center gap-1 mb-2.5">
+      {shown.map(c => {
+        const css = COLOUR_CSS[c.toLowerCase()]
+        return css ? (
+          <span
+            key={c}
+            title={c}
+            style={{ background: css }}
+            className={`w-3.5 h-3.5 rounded-full flex-shrink-0 border ${c.toLowerCase() === 'white' ? 'border-gray-300' : 'border-transparent'}`}
+          />
+        ) : (
+          <span key={c} title={c} className="w-3.5 h-3.5 rounded-full bg-gray-200 flex-shrink-0 border border-transparent" />
+        )
+      })}
+      {extra > 0 && (
+        <span className="text-[10px] text-gray-400 font-semibold ml-0.5">+{extra}</span>
+      )}
+    </div>
+  )
+}
+
 const FILTERS = [
   { label: 'All',           key: 'all' },
   { label: 'Footwear',      key: 'footwear' },
@@ -26,7 +72,7 @@ const FILTERS = [
   { label: 'Under GH₵100', key: 'under100' },
 ]
 
-export default function FeaturedProducts({ products }: { products: (Product & { sizes?: string[] })[] }) {
+export default function FeaturedProducts({ products }: { products: Product[] }) {
   const [active, setActive] = useState('all')
   const { add } = useCart()
   const router = useRouter()
@@ -41,10 +87,20 @@ export default function FeaturedProducts({ products }: { products: (Product & { 
     return true
   })
 
-  function handleCart(e: React.MouseEvent, p: Product & { sizes?: string[] }) {
+  function cardButtonLabel(p: Product) {
+    const hasSizes   = p.sizes   && p.sizes.length   > 0
+    const hasColours = p.colours && p.colours.length > 0
+    if (hasSizes && hasColours) return 'Pick Options'
+    if (hasSizes)   return 'Pick Size'
+    if (hasColours) return 'Pick Colour'
+    return 'Add to Cart'
+  }
+
+  function handleCart(e: React.MouseEvent, p: Product) {
     e.preventDefault()
     e.stopPropagation()
-    if (p.sizes && p.sizes.length > 0) {
+    const needsPage = (p.sizes && p.sizes.length > 0) || (p.colours && p.colours.length > 0)
+    if (needsPage) {
       router.push(`/product/${p.id}`)
     } else {
       add(p, undefined)
@@ -122,7 +178,6 @@ export default function FeaturedProducts({ products }: { products: (Product & { 
                           {p.badge === 'sale' ? '-30%' : p.badge}
                         </span>
                       )}
-
                     </div>
 
                     {/* Info */}
@@ -130,19 +185,24 @@ export default function FeaturedProducts({ products }: { products: (Product & { 
                       <p className="text-[10px] text-[#C4873A] uppercase tracking-[0.15em] font-semibold mb-1">
                         {p.category?.name}
                       </p>
-                      <h3 className="font-medium text-[#1A1208] text-sm line-clamp-2 leading-snug mb-3">
+                      <h3 className="font-medium text-[#1A1208] text-sm line-clamp-2 leading-snug mb-2">
                         {p.name}
                       </h3>
+
+                      {/* Colour dots */}
+                      <ColourDots colours={p.colours ?? []} />
+
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-serif text-base md:text-lg text-[#7A4F2D] font-bold">
                           GH₵{Number(p.selling_price).toFixed(0)}
                         </span>
                         {!soldOut && (
                           <button
+                            type="button"
                             onClick={e => handleCart(e, p)}
                             className="bg-[#1A1208] hover:bg-[#C4873A] text-white text-[11px] px-3 py-1.5 rounded-full font-semibold transition-colors whitespace-nowrap"
                           >
-                            {p.sizes && p.sizes.length > 0 ? 'Pick Size' : 'Add to Cart'}
+                            {cardButtonLabel(p)}
                           </button>
                         )}
                       </div>

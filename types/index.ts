@@ -14,6 +14,12 @@ export interface Category {
   image_url?: string
 }
 
+export interface ColourVariant {
+  colour: string    // empty string = untagged (no colour association)
+  image: string     // URL
+  sizes?: string[]  // sizes available for this specific colour
+}
+
 export interface Product {
   id: string
   name: string
@@ -24,11 +30,13 @@ export interface Product {
   cost_price?: number
   stock_qty: number
   images: string[]
+  sizes?: string[]
   emoji?: string
   is_featured: boolean
   is_active: boolean
   badge?: 'new' | 'hot' | 'sale' | null
   colours?: string[]
+  colour_variants?: ColourVariant[]
   created_at: string
   updated_at: string
 }

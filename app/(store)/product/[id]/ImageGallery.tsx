@@ -1,9 +1,21 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ShoppingBag } from 'lucide-react'
 
-export default function ImageGallery({ images, name }: { images: string[]; name: string }) {
+interface Props {
+  images: string[]
+  name: string
+  activeImageUrl?: string
+}
+
+export default function ImageGallery({ images, name, activeImageUrl }: Props) {
   const [active, setActive] = useState(0)
+
+  useEffect(() => {
+    if (!activeImageUrl) return
+    const idx = images.indexOf(activeImageUrl)
+    if (idx >= 0) setActive(idx)
+  }, [activeImageUrl, images])
 
   if (!images.length) {
     return (

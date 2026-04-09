@@ -10,16 +10,60 @@ const BADGE_STYLES: Record<string, string> = {
   sale: 'bg-[#C43A3A] text-white',
 }
 
+const COLOUR_CSS: Record<string, string> = {
+  black: '#111111',
+  white: '#f8f5ef',
+  red: '#dc2626',
+  blue: '#2563eb',
+  navy: '#1e293b',
+  green: '#16a34a',
+  yellow: '#eab308',
+  pink: '#db2777',
+  brown: '#7c4f2d',
+  beige: '#d6c9b5',
+  purple: '#8b5cf6',
+  orange: '#f97316',
+  grey: '#6b7280',
+}
+
+function ColourDots({ colours }: { colours: string[] }) {
+  const shown = colours.slice(0, 4)
+  return (
+    <div className="flex items-center gap-1">
+      {shown.map(colour => {
+        const css = COLOUR_CSS[colour.toLowerCase()]
+        return (
+          <span
+            key={colour}
+            title={colour}
+            style={{ background: css ?? '#d1d5db' }}
+            className={`w-3.5 h-3.5 rounded-full border ${css ? '' : 'border-gray-300'}`}
+          />
+        )
+      })}
+      {colours.length > shown.length && <span className="text-[10px] text-[#8C7B6A]">+{colours.length - shown.length}</span>}
+    </div>
+  )
+}
+
 export default function ProductCard({ product, index }: { product: Product & { sizes?: string[] }; index?: number }) {
   const { add } = useCart()
   const router = useRouter()
+  const hasSizes = product.sizes && product.sizes.length > 0
+  const hasColours = product.colours && product.colours.length > 0
+
+  function cardButtonLabel() {
+    if (hasSizes && hasColours) return 'Pick Options'
+    if (hasSizes) return 'Pick Size'
+    if (hasColours) return 'Pick Colour'
+    return 'Add to Cart'
+  }
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    const hasSizes = product.sizes && product.sizes.length > 0
-    if (hasSizes) {
-      // Go to product page to pick a size
+    const needsPage = hasSizes || hasColours
+    if (needsPage) {
       router.push(`/product/${product.id}`)
     } else {
       add(product, undefined)
@@ -49,13 +93,23 @@ export default function ProductCard({ product, index }: { product: Product & { s
             {product.name}
           </h3>
 
-<div className="flex items-center justify-between mt-1">
+          {hasColours && (
+            <div className="flex items-center gap-2 flex-wrap mb-3">
+              <ColourDots colours={product.colours ?? []} />
+              <span className="text-[10px] text-[#8C7B6A] uppercase tracking-[0.2em] font-semibold">
+                {product.colours?.length} colour{product.colours?.length === 1 ? '' : 's'}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between mt-1">
             <span className="font-serif text-base md:text-lg text-[#7A4F2D]">GH₵{Number(product.selling_price).toFixed(0)}</span>
             <button
+              type="button"
               onClick={handleAddToCart}
               className="bg-[#1A1208] hover:bg-[#C4873A] text-white text-xs px-3 py-1.5 rounded font-medium transition-colors"
             >
-              {product.sizes && product.sizes.length > 0 ? 'Pick Size' : 'Add to Cart'}
+              {cardButtonLabel()}
             </button>
           </div>
         </div>
