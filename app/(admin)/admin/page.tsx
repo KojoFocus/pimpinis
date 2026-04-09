@@ -203,7 +203,7 @@ export default async function AdminDashboard() {
           </Link>
         </div>
         <div className="space-y-4">
-          {lowStock.slice(0, 3).map((item: any) => (
+          {(lowStock ?? []).slice(0, 3).map((item: any) => (
             <div key={item.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">{item.emoji}</span>
