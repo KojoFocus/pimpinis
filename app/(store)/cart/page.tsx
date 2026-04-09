@@ -8,8 +8,8 @@ const WHATSAPP_NUMBER = '233240395127'
 
 interface CustomerInfo { name: string; phone: string }
 
-function itemKey(productId: string, size?: string) {
-  return size ? `${productId}__${size}` : productId
+function itemKey(productId: string, size?: string, colour?: string) {
+  return `${productId}__${size ?? ''}__${colour ?? ''}`
 }
 
 export default function CartPage() {
@@ -22,7 +22,7 @@ export default function CartPage() {
 
   // Keep selected in sync with items (select all by default, remove stale keys)
   useEffect(() => {
-    setSelected(new Set(items.map(i => itemKey(i.product.id, i.size))))
+    setSelected(new Set(items.map(i => itemKey(i.product.id, i.size, i.colour))))
   }, [items.length])
 
   useEffect(() => {
@@ -44,11 +44,11 @@ export default function CartPage() {
     if (selected.size === items.length) {
       setSelected(new Set())
     } else {
-      setSelected(new Set(items.map(i => itemKey(i.product.id, i.size))))
+      setSelected(new Set(items.map(i => itemKey(i.product.id, i.size, i.colour))))
     }
   }
 
-  const selectedItems = items.filter(i => selected.has(itemKey(i.product.id, i.size)))
+  const selectedItems = items.filter(i => selected.has(itemKey(i.product.id, i.size, i.colour)))
   const selectedTotal = selectedItems.reduce((s, i) => s + i.product.selling_price * i.quantity, 0)
 
   async function handleCheckout(e: React.FormEvent) {
@@ -73,6 +73,7 @@ export default function CartPage() {
             quantity: i.quantity,
             unit_price: i.product.selling_price,
             size: i.size,
+            colour: i.colour,
           })),
         }),
       })
@@ -89,8 +90,8 @@ export default function CartPage() {
     }
 
     const lines = selectedItems.map(i => {
-      const size = i.size ? ` (Size: ${i.size})` : ''
-      return `• ${i.product.name}${size} × ${i.quantity} — GHS ${(i.product.selling_price * i.quantity).toFixed(2)}`
+      const attrs = [i.size && `Size: ${i.size}`, i.colour && `Colour: ${i.colour}`].filter(Boolean).join(', ')
+      return `• ${i.product.name}${attrs ? ` (${attrs})` : ''} × ${i.quantity} — GHS ${(i.product.selling_price * i.quantity).toFixed(2)}`
     })
 
     const msg = [
@@ -107,7 +108,7 @@ export default function CartPage() {
     ].join('\n')
 
     // Remove only the checked-out items from cart
-    selectedItems.forEach(i => remove(i.product.id, i.size))
+    selectedItems.forEach(i => remove(i.product.id, i.size, i.colour))
     setShowCheckout(false)
     setSaving(false)
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank')
@@ -167,7 +168,7 @@ export default function CartPage() {
         {/* Items */}
         <div className="space-y-3 mb-6">
           {items.map(item => {
-            const key = itemKey(item.product.id, item.size)
+            const key = itemKey(item.product.id, item.size, item.colour)
             const isSelected = selected.has(key)
             return (
               <div
@@ -191,11 +192,16 @@ export default function CartPage() {
 
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-[#1A1208] text-sm line-clamp-1">{item.product.name}</h3>
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     <p className="text-xs text-[#8C7B6A]">{item.product.category?.name}</p>
                     {item.size && (
                       <span className="text-[10px] bg-[#1A1208] text-white px-2 py-0.5 rounded-full font-semibold">
                         {item.size}
+                      </span>
+                    )}
+                    {item.colour && (
+                      <span className="text-[10px] bg-[#C4873A] text-white px-2 py-0.5 rounded-full font-semibold">
+                        {item.colour}
                       </span>
                     )}
                   </div>
@@ -206,14 +212,14 @@ export default function CartPage() {
 
                 <div className="flex items-center gap-1.5">
                   <button
-                    onClick={() => updateQty(item.product.id, item.quantity - 1, item.size)}
+                    onClick={() => updateQty(item.product.id, item.quantity - 1, item.size, item.colour)}
                     className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center hover:border-[#C4873A] hover:text-[#C4873A] transition-colors text-gray-400"
                   >
                     <Minus size={11} />
                   </button>
                   <span className="w-7 text-center font-bold text-sm text-[#1A1208]">{item.quantity}</span>
                   <button
-                    onClick={() => updateQty(item.product.id, item.quantity + 1, item.size)}
+                    onClick={() => updateQty(item.product.id, item.quantity + 1, item.size, item.colour)}
                     className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center hover:border-[#C4873A] hover:text-[#C4873A] transition-colors text-gray-400"
                   >
                     <Plus size={11} />
@@ -221,7 +227,7 @@ export default function CartPage() {
                 </div>
 
                 <button
-                  onClick={() => remove(item.product.id, item.size)}
+                  onClick={() => remove(item.product.id, item.size, item.colour)}
                   className="text-gray-200 hover:text-red-400 transition-colors ml-1 flex-shrink-0"
                 >
                   <Trash2 size={15} />
@@ -326,9 +332,11 @@ export default function CartPage() {
               {/* Order summary — only selected items */}
               <div className="bg-[#FAF8F5] rounded-2xl p-4 space-y-2">
                 {selectedItems.map(i => (
-                  <div key={`${i.product.id}-${i.size}`} className="flex justify-between text-sm">
+                  <div key={`${i.product.id}-${i.size}-${i.colour}`} className="flex justify-between text-sm">
                     <span className="text-[#8C7B6A] truncate max-w-[200px]">
-                      {i.product.name}{i.size ? ` (${i.size})` : ''} ×{i.quantity}
+                      {i.product.name}
+                      {(i.size || i.colour) && ` (${[i.size, i.colour].filter(Boolean).join(', ')})`}
+                      {' '}×{i.quantity}
                     </span>
                     <span className="font-semibold text-[#1A1208] ml-2">GHS {(i.product.selling_price * i.quantity).toFixed(2)}</span>
                   </div>

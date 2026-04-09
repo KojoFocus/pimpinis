@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Product, Category } from '@/types'
 import ImageUploader from './ImageUploader'
+import { X, Plus } from 'lucide-react'
 
 const SIZE_MAP: Record<string, string[]> = {
   footwear:    ['36','37','38','39','40','41','42','43','44','45'],
@@ -14,6 +15,11 @@ const SIZE_MAP: Record<string, string[]> = {
   others:      ['XS','S','M','L','XL','XXL','XXXL','6','8','10','12','14','16','18','20'],
 }
 
+const PRESET_COLOURS = [
+  'Black','White','Red','Blue','Navy','Green','Yellow',
+  'Pink','Brown','Grey','Beige','Purple','Orange','Gold','Silver',
+]
+
 function getSizes(categories: Category[], categoryId: string): string[] {
   const cat = categories.find(c => c.id === categoryId)
   if (!cat) return []
@@ -22,7 +28,7 @@ function getSizes(categories: Category[], categoryId: string): string[] {
 
 interface Props {
   categories: Category[]
-  product?: Partial<Product & { sizes?: string[] }>
+  product?: Partial<Product & { sizes?: string[]; colours?: string[] }>
 }
 
 export default function ProductForm({ categories, product }: Props) {
@@ -31,6 +37,8 @@ export default function ProductForm({ categories, product }: Props) {
   const [deleting, setDeleting] = useState(false)
   const [images, setImages] = useState<string[]>(product?.images ?? [])
   const [sizes, setSizes] = useState<string[]>(product?.sizes ?? [])
+  const [colours, setColours] = useState<string[]>(product?.colours ?? [])
+  const [colourInput, setColourInput] = useState('')
   const [form, setForm] = useState({
     name:          product?.name ?? '',
     description:   product?.description ?? '',
@@ -51,10 +59,21 @@ export default function ProductForm({ categories, product }: Props) {
     setSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size])
   }
 
+  function addColour(colour: string) {
+    const trimmed = colour.trim()
+    if (!trimmed || colours.includes(trimmed)) return
+    setColours(prev => [...prev, trimmed])
+    setColourInput('')
+  }
+
+  function removeColour(colour: string) {
+    setColours(prev => prev.filter(c => c !== colour))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    const payload = { ...form, images, sizes }
+    const payload = { ...form, images, sizes, colours }
     const res = await fetch(
       isEdit ? `/api/products/${product!.id}` : '/api/products',
       { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
@@ -143,9 +162,7 @@ export default function ProductForm({ categories, product }: Props) {
                   </button>
                 ))}
               </div>
-              {sizes.length > 0 && (
-                <p className="text-xs text-gray-400 mt-2">Selected: {sizes.join(', ')}</p>
-              )}
+              {sizes.length > 0 && <p className="text-xs text-gray-400 mt-2">Selected: {sizes.join(', ')}</p>}
             </>
           ) : (
             <p className="text-xs text-gray-400">No sizes needed for this category</p>
@@ -153,9 +170,63 @@ export default function ProductForm({ categories, product }: Props) {
         </div>
       )}
 
+      {/* Colours */}
+      <div>
+        <label className={label}>Available Colours</label>
+        {/* Preset chips */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          {PRESET_COLOURS.map(c => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => colours.includes(c) ? removeColour(c) : addColour(c)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                colours.includes(c)
+                  ? 'bg-[#1A1208] text-white border-[#1A1208]'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-[#C4873A]'
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+        {/* Custom colour input */}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            className={`${field} flex-1`}
+            value={colourInput}
+            onChange={e => setColourInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addColour(colourInput) } }}
+            placeholder="Type a custom colour and press Enter"
+          />
+          <button
+            type="button"
+            onClick={() => addColour(colourInput)}
+            className="flex items-center gap-1 px-4 py-2 bg-[#1A1208] text-white rounded-lg text-sm font-medium hover:bg-[#C4873A] transition-colors"
+          >
+            <Plus size={14} /> Add
+          </button>
+        </div>
+        {/* Selected colours */}
+        {colours.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {colours.map(c => (
+              <span key={c} className="flex items-center gap-1.5 bg-[#F0EAE0] text-[#7A4F2D] text-xs font-semibold px-3 py-1.5 rounded-full">
+                {c}
+                <button type="button" onClick={() => removeColour(c)} className="hover:text-red-500 transition-colors">
+                  <X size={11} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        {colours.length === 0 && <p className="text-xs text-gray-400 mt-2">No colour options — leave empty if product has one colour</p>}
+      </div>
+
       {/* Active */}
       <div>
-        <label className="flex items-center gap-2.5 cursor-pointer group">
+        <label className="flex items-center gap-2.5 cursor-pointer">
           <input
             type="checkbox"
             checked={form.is_active}
@@ -169,6 +240,7 @@ export default function ProductForm({ categories, product }: Props) {
       {/* Images */}
       <div>
         <label className={label}>Images</label>
+        <p className="text-xs text-gray-400 mb-2">Upload one image per colour variant so customers can see each colour</p>
         <ImageUploader images={images} onChange={setImages} />
       </div>
 

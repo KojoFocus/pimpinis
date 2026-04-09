@@ -1,11 +1,20 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import type { Product } from '@/types'
 import AddToCartButton from './AddToCartButton'
+import ImageGallery from './ImageGallery'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
+
+const BADGE_STYLE: Record<string, string> = {
+  new:  'bg-[#1A1208] text-white',
+  hot:  'bg-[#C4873A] text-white',
+  sale: 'bg-red-500 text-white',
+}
 
 export default async function ProductPage(props: PageProps<'/product/[id]'>) {
   const { id } = await props.params
-  const supabase = await createServerSupabaseClient()
+  const supabase = createAdminClient()
 
   const { data: product, error } = await supabase
     .from('products')
@@ -17,48 +26,50 @@ export default async function ProductPage(props: PageProps<'/product/[id]'>) {
   if (error || !product) notFound()
 
   const p = product as Product
-  const mainImg = p.images?.[0]
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10">
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <Link href="/" className="inline-flex items-center gap-2 text-sm text-[#8C7B6A] hover:text-[#1A1208] mb-6 transition-colors">
+        <ArrowLeft size={15} /> Back
+      </Link>
+
       <div className="grid md:grid-cols-2 gap-10">
-        {/* Images */}
-        <div className="space-y-3">
-          <div className="aspect-square bg-gray-100 rounded-2xl overflow-hidden">
-            {mainImg
-              ? <img src={mainImg} alt={p.name} className="w-full h-full object-cover" />
-              : <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">No image</div>
-            }
-          </div>
-          {p.images?.length > 1 && (
-            <div className="flex gap-2">
-              {p.images.slice(1).map((url, i) => (
-                <div key={i} className="w-16 h-16 rounded-lg overflow-hidden border-2 border-transparent hover:border-[#f05a7e] cursor-pointer">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Interactive image gallery */}
+        <ImageGallery images={p.images ?? []} name={p.name} />
 
         {/* Details */}
-        <div>
-          <p className="text-sm text-gray-400 uppercase tracking-wide mb-2">{p.category?.name}</p>
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">{p.name}</h1>
+        <div className="flex flex-col">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#C4873A] mb-2">{p.category?.name}</p>
+          <h1 className="font-serif text-2xl md:text-3xl text-[#1A1208] mb-3 leading-tight">{p.name}</h1>
+
           {p.badge && (
-            <span className="inline-block text-xs font-bold px-3 py-1 rounded-full bg-[#f05a7e] text-white uppercase mb-4">
+            <span className={`self-start text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-4 ${BADGE_STYLE[p.badge] ?? 'bg-gray-100 text-gray-600'}`}>
               {p.badge}
             </span>
           )}
-          <p className="text-3xl font-extrabold text-gray-900 mb-4">GHS {p.selling_price.toFixed(2)}</p>
-          {p.description && <p className="text-gray-600 mb-6 leading-relaxed">{p.description}</p>}
-          <p className="text-sm text-gray-500 mb-6">
+
+          <p className="font-serif text-3xl font-bold text-[#7A4F2D] mb-4">
+            GHS {Number(p.selling_price).toFixed(2)}
+          </p>
+
+          {p.description && (
+            <p className="text-[#8C7B6A] mb-5 leading-relaxed text-sm">{p.description}</p>
+          )}
+
+          <p className="text-sm mb-6">
             {p.stock_qty > 0
-              ? <span className="text-emerald-600 font-medium">In stock ({p.stock_qty} available)</span>
-              : <span className="text-red-500 font-medium">Out of stock</span>
+              ? <span className="text-emerald-600 font-semibold">In stock ({p.stock_qty} available)</span>
+              : <span className="text-red-500 font-semibold">Out of stock</span>
             }
           </p>
-          {p.stock_qty > 0 && <AddToCartButton product={p} sizes={(p as any).sizes ?? []} />}
+
+          {p.stock_qty > 0 && (
+            <AddToCartButton
+              product={p}
+              sizes={(p as any).sizes ?? []}
+              colours={(p as any).colours ?? []}
+            />
+          )}
         </div>
       </div>
     </div>

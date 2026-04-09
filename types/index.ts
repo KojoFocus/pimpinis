@@ -28,6 +28,7 @@ export interface Product {
   is_featured: boolean
   is_active: boolean
   badge?: 'new' | 'hot' | 'sale' | null
+  colours?: string[]
   created_at: string
   updated_at: string
 }
@@ -92,4 +93,6 @@ export interface IncomeStatementRow {
 export interface CartItem {
   product: Product
   quantity: number
+  size?: string
+  colour?: string
 }

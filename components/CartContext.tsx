@@ -6,13 +6,14 @@ export interface CartItem {
   product: Product
   quantity: number
   size?: string
+  colour?: string
 }
 
 interface CartCtx {
   items: CartItem[]
-  add: (product: Product, size?: string) => void
-  remove: (productId: string, size?: string) => void
-  updateQty: (productId: string, qty: number, size?: string) => void
+  add: (product: Product, size?: string, colour?: string) => void
+  remove: (productId: string, size?: string, colour?: string) => void
+  updateQty: (productId: string, qty: number, size?: string, colour?: string) => void
   clear: () => void
   total: number
   count: number
@@ -20,8 +21,8 @@ interface CartCtx {
 
 const CartContext = createContext<CartCtx | null>(null)
 
-function itemKey(productId: string, size?: string) {
-  return size ? `${productId}__${size}` : productId
+function itemKey(productId: string, size?: string, colour?: string) {
+  return `${productId}__${size ?? ''}__${colour ?? ''}`
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -38,28 +39,31 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('pimpinis_cart', JSON.stringify(items))
   }, [items])
 
-  function add(product: Product, size?: string) {
+  function add(product: Product, size?: string, colour?: string) {
     setItems(prev => {
-      const existing = prev.find(i => itemKey(i.product.id, i.size) === itemKey(product.id, size))
+      const key = itemKey(product.id, size, colour)
+      const existing = prev.find(i => itemKey(i.product.id, i.size, i.colour) === key)
       if (existing) {
         return prev.map(i =>
-          itemKey(i.product.id, i.size) === itemKey(product.id, size)
+          itemKey(i.product.id, i.size, i.colour) === key
             ? { ...i, quantity: i.quantity + 1 }
             : i
         )
       }
-      return [...prev, { product, quantity: 1, size }]
+      return [...prev, { product, quantity: 1, size, colour }]
     })
   }
 
-  function remove(productId: string, size?: string) {
-    setItems(prev => prev.filter(i => itemKey(i.product.id, i.size) !== itemKey(productId, size)))
+  function remove(productId: string, size?: string, colour?: string) {
+    setItems(prev => prev.filter(i => itemKey(i.product.id, i.size, i.colour) !== itemKey(productId, size, colour)))
   }
 
-  function updateQty(productId: string, qty: number, size?: string) {
-    if (qty < 1) { remove(productId, size); return }
+  function updateQty(productId: string, qty: number, size?: string, colour?: string) {
+    if (qty < 1) { remove(productId, size, colour); return }
     setItems(prev => prev.map(i =>
-      itemKey(i.product.id, i.size) === itemKey(productId, size) ? { ...i, quantity: qty } : i
+      itemKey(i.product.id, i.size, i.colour) === itemKey(productId, size, colour)
+        ? { ...i, quantity: qty }
+        : i
     ))
   }
 
