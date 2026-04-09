@@ -89,9 +89,11 @@ export default function CartPage() {
       return
     }
 
-    const lines = selectedItems.map(i => {
+    const baseUrl = window.location.origin
+    const lines = selectedItems.flatMap(i => {
       const attrs = [i.size && `Size: ${i.size}`, i.colour && `Colour: ${i.colour}`].filter(Boolean).join(', ')
-      return `• ${i.product.name}${attrs ? ` (${attrs})` : ''} × ${i.quantity} — GHS ${(i.product.selling_price * i.quantity).toFixed(2)}`
+      const line = `• ${i.product.name}${attrs ? ` (${attrs})` : ''} × ${i.quantity} — GHS ${(i.product.selling_price * i.quantity).toFixed(2)}`
+      return [line, `  ${baseUrl}/product/${i.product.id}`]
     })
 
     const msg = [
