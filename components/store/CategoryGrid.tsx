@@ -31,7 +31,6 @@ const CATEGORY_EMOJI: Record<string, string> = {
   shirts: '👕',
   trousers: '👖',
   shorts: '🩳',
-  sunglasses: '🕶️',
   backpacks: '🎒',
   perfume: '🌸',
 }
