@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Package, ShoppingBag, AlertTriangle, TrendingUp, PlusCircle, ArrowRight } from 'lucide-react'
+import { Package, ShoppingBag, AlertTriangle, TrendingUp, PlusCircle, ArrowRight, Clock, CheckCircle2, Truck } from 'lucide-react'
 
 export default async function AdminDashboard() {
   const supabase = await createServerSupabaseClient()
@@ -12,7 +12,7 @@ export default async function AdminDashboard() {
     { count: pendingOrders },
     { data: recentOrders },
     { data: lowStock },
-    { data: revenueData },
+    { data: allOrders },
   ] = await Promise.all([
     supabase.from('products').select('*', { count: 'exact', head: true }),
     supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
@@ -29,18 +29,40 @@ export default async function AdminDashboard() {
       .order('stock_qty', { ascending: true })
       .limit(5),
     supabase.from('orders')
-      .select('total_amount')
-      .eq('status', 'delivered'),
+      .select('total_amount, status, created_at'),
   ])
 
-  const totalRevenue = (revenueData ?? []).reduce((s: number, o: any) => s + Number(o.total_amount), 0)
+  // Revenue calculations
+  const now = new Date()
+  const startOfToday   = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startOfWeek    = new Date(startOfToday); startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay())
+  const startOfMonth   = new Date(now.getFullYear(), now.getMonth(), 1)
+
+  const PAID_STATUSES = ['confirmed', 'shipped', 'delivered']
+
+  function revenue(orders: any[], from?: Date) {
+    return (orders ?? [])
+      .filter(o => PAID_STATUSES.includes(o.status) && (!from || new Date(o.created_at) >= from))
+      .reduce((s: number, o: any) => s + Number(o.total_amount), 0)
+  }
+
+  const revenueAll   = revenue(allOrders ?? [])
+  const revenueMonth = revenue(allOrders ?? [], startOfMonth)
+  const revenueWeek  = revenue(allOrders ?? [], startOfWeek)
+  const revenueToday = revenue(allOrders ?? [], startOfToday)
+
+  // Order pipeline counts
+  const pipeline = ['pending','confirmed','shipped','delivered','cancelled'].reduce((acc: Record<string,number>, s) => {
+    acc[s] = (allOrders ?? []).filter((o: any) => o.status === s).length
+    return acc
+  }, {})
 
   const stats = [
     {
       label: 'Total Revenue',
-      value: `GHS ${totalRevenue.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: `GHS ${revenueAll.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: TrendingUp,
-      sub: 'From delivered orders',
+      sub: 'Confirmed & above',
       color: 'text-emerald-600',
       bg: 'bg-emerald-50',
       border: 'border-l-emerald-500',
@@ -113,13 +135,64 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
+      {/* Revenue breakdown */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-semibold text-gray-800">Revenue Breakdown</h2>
+          <span className="text-xs bg-emerald-50 text-emerald-600 font-semibold px-2.5 py-0.5 rounded-full border border-emerald-200">Confirmed + shipped + delivered</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: 'Today',      value: revenueToday },
+            { label: 'This Week',  value: revenueWeek },
+            { label: 'This Month', value: revenueMonth },
+            { label: 'All Time',   value: revenueAll },
+          ].map(({ label, value }) => (
+            <div key={label} className="bg-gray-50 rounded-xl p-4 text-center">
+              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">{label}</p>
+              <p className="font-serif font-bold text-[#7A4F2D] text-xl">
+                GHS {value.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Order Pipeline */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-semibold text-gray-800">Order Pipeline</h2>
+          <Link href="/admin/orders" className="text-xs text-[#C4873A] hover:text-[#7A4F2D] flex items-center gap-1 font-medium">
+            Manage <ArrowRight size={12} />
+          </Link>
+        </div>
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {[
+            { key: 'pending',   label: 'Pending',   icon: Clock,         color: 'bg-amber-50 border-amber-200 text-amber-700',   num: 'text-amber-700' },
+            { key: 'confirmed', label: 'Confirmed', icon: CheckCircle2,  color: 'bg-blue-50 border-blue-200 text-blue-600',      num: 'text-blue-700' },
+            { key: 'shipped',   label: 'Shipped',   icon: Truck,         color: 'bg-indigo-50 border-indigo-200 text-indigo-600',num: 'text-indigo-700' },
+            { key: 'delivered', label: 'Delivered', icon: Package,       color: 'bg-emerald-50 border-emerald-200 text-emerald-600', num: 'text-emerald-700' },
+            { key: 'cancelled', label: 'Cancelled', icon: AlertTriangle, color: 'bg-red-50 border-red-200 text-red-500',         num: 'text-red-600' },
+          ].map(({ key, label, icon: Icon, color, num }, idx, arr) => (
+            <div key={key} className="flex items-center gap-2 flex-shrink-0">
+              <div className={`border rounded-2xl px-5 py-4 text-center min-w-[100px] ${color}`}>
+                <Icon size={18} className="mx-auto mb-1.5" />
+                <p className={`text-2xl font-bold ${num}`}>{pipeline[key] ?? 0}</p>
+                <p className="text-xs font-semibold mt-0.5">{label}</p>
+              </div>
+              {idx < arr.length - 1 && <ArrowRight size={14} className="text-gray-300 flex-shrink-0" />}
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Recent Orders */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="font-semibold text-gray-800">Recent Orders</h2>
-            <Link href="/admin/orders" className="text-xs text-[#C4873A] hover:text-[#7A4F2D] flex items-center gap-1 font-medium transition-colors">
+            <Link href="/admin/orders" className="text-xs text-[#C4873A] hover:text-[#7A4F2D] flex items-center gap-1 font-medium">
               View all <ArrowRight size={12} />
             </Link>
           </div>
@@ -144,7 +217,9 @@ export default async function AdminDashboard() {
                         {o.status}
                       </span>
                     </td>
-                    <td className="px-6 py-3.5 text-right font-bold text-gray-800">GHS {Number(o.total_amount).toFixed(2)}</td>
+                    <td className="px-6 py-3.5 text-right font-bold text-gray-800">
+                      GHS {Number(o.total_amount).toFixed(2)}
+                    </td>
                     <td className="px-6 py-3.5 text-gray-400 text-xs whitespace-nowrap">
                       {new Date(o.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                     </td>
@@ -165,7 +240,7 @@ export default async function AdminDashboard() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="font-semibold text-gray-800">Low Stock</h2>
-            <Link href="/admin/products" className="text-xs text-[#C4873A] hover:text-[#7A4F2D] font-medium transition-colors">Manage</Link>
+            <Link href="/admin/products" className="text-xs text-[#C4873A] hover:text-[#7A4F2D] font-medium">Manage</Link>
           </div>
           <div className="p-4 space-y-2">
             {lowStock?.length ? lowStock.map((p: any) => (
@@ -195,10 +270,10 @@ export default async function AdminDashboard() {
         <p className="text-xs uppercase tracking-[0.2em] text-gray-400 font-semibold mb-3">Quick Actions</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { href: '/admin/products/new', label: 'Add Product',   icon: PlusCircle,   color: 'text-[#C4873A]', bg: 'bg-[#C4873A]/8' },
-            { href: '/admin/orders',       label: 'View Orders',   icon: ShoppingBag,  color: 'text-blue-500',   bg: 'bg-blue-50' },
-            { href: '/admin/products',     label: 'Manage Stock',  icon: Package,      color: 'text-emerald-500', bg: 'bg-emerald-50' },
-            { href: '/admin/categories',   label: 'Categories',    icon: AlertTriangle, color: 'text-purple-500', bg: 'bg-purple-50' },
+            { href: '/admin/products/new', label: 'Add Product',  icon: PlusCircle,   color: 'text-[#C4873A]',   bg: 'bg-[#C4873A]/8' },
+            { href: '/admin/orders',       label: 'View Orders',  icon: ShoppingBag,  color: 'text-blue-500',    bg: 'bg-blue-50' },
+            { href: '/admin/products',     label: 'Manage Stock', icon: Package,      color: 'text-emerald-500', bg: 'bg-emerald-50' },
+            { href: '/admin/categories',   label: 'Categories',   icon: AlertTriangle,color: 'text-purple-500',  bg: 'bg-purple-50' },
           ].map(a => (
             <Link
               key={a.href}

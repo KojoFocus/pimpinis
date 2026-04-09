@@ -17,6 +17,7 @@ export default function CartPage() {
   const [showCheckout, setShowCheckout] = useState(false)
   const [customer, setCustomer] = useState<CustomerInfo>({ name: '', phone: '' })
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   // Keep selected in sync with items (select all by default, remove stale keys)
@@ -56,9 +57,10 @@ export default function CartPage() {
     setSaving(true)
 
     localStorage.setItem('pimpinis_customer', JSON.stringify(customer))
+    setSaveError(null)
 
     try {
-      await fetch('/api/orders', {
+      const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -74,7 +76,17 @@ export default function CartPage() {
           })),
         }),
       })
-    } catch {}
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setSaveError(err.error ?? `Server error ${res.status}`)
+        setSaving(false)
+        return
+      }
+    } catch (e: any) {
+      setSaveError(e?.message ?? 'Network error — could not save order')
+      setSaving(false)
+      return
+    }
 
     const lines = selectedItems.map(i => {
       const size = i.size ? ` (Size: ${i.size})` : ''
@@ -326,6 +338,12 @@ export default function CartPage() {
                   <span className="text-[#7A4F2D] font-serif">GHS {selectedTotal.toFixed(2)}</span>
                 </div>
               </div>
+
+              {saveError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-600 font-medium">
+                  ⚠ Order save failed: {saveError}
+                </div>
+              )}
 
               <button
                 type="submit"

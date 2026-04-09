@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { ShoppingBag, Menu, X, Tag } from 'lucide-react'
+import { ShoppingBag, Menu, X, Tag, Truck } from 'lucide-react'
 import { useCart } from '@/components/CartContext'
 import { CATEGORIES } from '@/lib/categories'
 import { useState } from 'react'
@@ -48,6 +48,12 @@ export default function Navbar() {
           {/* Right actions */}
           <div className="flex items-center gap-2">
             <Link
+              href="/track"
+              className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-white/60 hover:text-[#C4873A] px-3 py-2 rounded-full hover:bg-white/5 transition-all"
+            >
+              <Truck size={13} /> Track Order
+            </Link>
+            <Link
               href="/cart"
               className="relative flex items-center gap-2 bg-[#C4873A] hover:bg-[#7A4F2D] text-white px-4 py-2 rounded-full text-xs font-semibold transition-colors"
             >
@@ -72,6 +78,13 @@ export default function Navbar() {
         {/* Mobile menu */}
         {open && (
           <div className="md:hidden border-t border-white/10 bg-[#1A1208] px-4 py-4 space-y-0.5">
+            <Link
+              href="/track"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2.5 rounded-xl transition-all"
+            >
+              <Truck size={16} className="text-[#C4873A]" /> Track Order
+            </Link>
             <a
               href="/#shop-section"
               onClick={() => setOpen(false)}

@@ -18,7 +18,8 @@ export default async function OrdersPage() {
     .order('created_at', { ascending: false })
 
   const total = orders?.length ?? 0
-  const revenue = (orders ?? []).filter((o: any) => o.status === 'delivered')
+  const revenue = (orders ?? [])
+    .filter((o: any) => ['confirmed','shipped','delivered'].includes(o.status))
     .reduce((s: number, o: any) => s + Number(o.total_amount), 0)
   const pending = (orders ?? []).filter((o: any) => o.status === 'pending').length
 
