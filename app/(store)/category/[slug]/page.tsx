@@ -80,8 +80,8 @@ export default async function CategoryPage(props: PageProps<'/category/[slug]'>)
 
       {filtered.length === 0 ? (
         <div className="text-center py-20 text-gray-400">
-          <p className="text-5xl mb-4">{cat.emoji}</p>
-          <p className="text-lg">No {cat.name.toLowerCase()} yet. Check back soon!</p>
+          <p className="text-5xl mb-4">{emojiForCategory(category)}</p>
+          <p className="text-lg">No {category.name.toLowerCase()} yet. Check back soon!</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
