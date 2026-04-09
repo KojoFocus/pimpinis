@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { CATEGORIES } from '@/lib/categories'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import type { Category } from '@/types'
 
 const CARD_STYLES = [
   { bg: 'bg-[#F0EAE0]', text: 'text-[#7A4F2D]', dot: 'bg-[#C4873A]' },
@@ -11,7 +12,65 @@ const CARD_STYLES = [
   { bg: 'bg-[#D8EAE8]', text: 'text-[#1E4A4A]', dot: 'bg-[#2E8A8A]' },
 ]
 
-export default function CategoryGrid() {
+const CATEGORY_EMOJI: Record<string, string> = {
+  dresses: '👗',
+  footwear: '👟',
+  belts: '🪢',
+  sunglasses: '🕶️',
+  accessories: '💍',
+  hats: '🎩',
+  others: '🛍️',
+  bags: '👜',
+  watches: '⌚',
+  jewelry: '💍',
+  makeup: '💄',
+  socks: '🧦',
+  scarves: '🧣',
+  jackets: '🧥',
+  jeans: '👖',
+  shirts: '👕',
+  trousers: '👖',
+  shorts: '🩳',
+  sunglasses: '🕶️',
+  backpacks: '🎒',
+  perfume: '🌸',
+}
+
+function emojiForCategory(cat: Category) {
+  const slug = cat.slug.toLowerCase()
+  const name = cat.name.toLowerCase()
+
+  if (CATEGORY_EMOJI[slug]) return CATEGORY_EMOJI[slug]
+  if (name.includes('bag')) return '👜'
+  if (name.includes('watch')) return '⌚'
+  if (name.includes('ring') || name.includes('jewel') || name.includes('neck')) return '💍'
+  if (name.includes('shoe') || name.includes('foot')) return '👟'
+  if (name.includes('dress')) return '👗'
+  if (name.includes('hat') || name.includes('cap')) return '🎩'
+  if (name.includes('glass')) return '🕶️'
+  if (name.includes('belt')) return '🪢'
+  if (name.includes('perfume')) return '🌸'
+  if (name.includes('makeup') || name.includes('lip')) return '💄'
+  if (name.includes('scar') || name.includes('shawl')) return '🧣'
+  if (name.includes('sock')) return '🧦'
+  if (name.includes('jacket') || name.includes('coat')) return '🧥'
+  if (name.includes('jean') || name.includes('pant') || name.includes('trouser')) return '👖'
+  if (name.includes('shirt') || name.includes('tee')) return '👕'
+  if (name.includes('short')) return '🩳'
+  if (name.includes('backpack')) return '🎒'
+  if (name.includes('african') || name.includes('print')) return '👗'
+  return '🏷️'
+}
+
+export default async function CategoryGrid() {
+  const supabase = await createServerSupabaseClient()
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('id, name, slug')
+    .order('name', { ascending: true })
+
+  const cats = (categories as Category[]) ?? []
+
   return (
     <section className="py-10 px-4 bg-white border-b border-gray-100">
       <div className="max-w-7xl mx-auto">
@@ -23,8 +82,9 @@ export default function CategoryGrid() {
         </div>
 
         <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1 sm:grid sm:grid-cols-4 md:grid-cols-7">
-          {CATEGORIES.map((cat, idx) => {
+          {cats.map((cat, idx) => {
             const style = CARD_STYLES[idx % CARD_STYLES.length]
+            const emoji = emojiForCategory(cat)
             return (
               <Link
                 key={cat.slug}
@@ -32,7 +92,7 @@ export default function CategoryGrid() {
                 className={`flex-shrink-0 ${style.bg} group flex flex-col items-center justify-center gap-2.5 rounded-2xl py-6 px-3 min-w-[96px] sm:min-w-0 hover:shadow-lg hover:-translate-y-1 transition-all duration-200`}
               >
                 <span className="text-3xl leading-none group-hover:scale-110 transition-transform duration-200">
-                  {cat.emoji}
+                  {emoji}
                 </span>
                 <span className={`text-xs font-bold ${style.text} text-center leading-tight tracking-wide`}>
                   {cat.name}

@@ -1,9 +1,8 @@
-import { CartProvider } from '@/components/CartContext'
 import Navbar from '@/components/store/Navbar'
 
 export default function StoreLayout({ children }: { children: React.ReactNode }) {
   return (
-    <CartProvider>
+    <>
       <Navbar />
       <main className="flex-1">{children}</main>
       <footer className="bg-[#1A1208] text-white mt-12">
@@ -70,6 +69,6 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
       </footer>
-    </CartProvider>
+    </>
   )
 }
